@@ -21,6 +21,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import preprocessing
 from scipy.optimize import minimize
+from scipy.optimize import linprog
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
@@ -213,6 +214,39 @@ def update_local_model(agg_model, input_shape) :
     return local_model
 
 
+def Optimize_weights(fairness) :
+    # Assuming 'fairness' is the set of  fairness eval (EOD or SPD or others )
+    fairness_plus = np.maximum(0, fairness)  # Positive subset
+    fairness_minus = -np.minimum(0, fairness)  # Negative subset
+
+
+    def objective_function(weights, n):
+        return np.sum((weights - 1/n)**2)
+
+    #sum weights = 1
+    def constraint_function(weights):
+        return np.sum(weights) - 1
+
+    # Custom equality function: weighted sum of positive numbers equals the absolute value of the weighted sum of negative numbers
+    def equality_function(weights):
+        return np.sum(weights * fairness_plus) - np.sum(np.abs(weights * fairness_minus))
+
+    # Constraint: weights are non-negative
+    bounds = [(0, 1) for _ in range(len(fairness))]
+
+    # Initial guess for weights
+    initial_weights = np.ones(len(fairness)) / len(fairness)
+
+    # Solve the optimization problem
+    result = minimize(objective_function, initial_weights, args=(len(fairness),), method='SLSQP', constraints=[
+        {'type': 'eq', 'fun': equality_function},
+        {'type': 'eq', 'fun': constraint_function},
+    ], bounds=bounds)
+
+
+    # Extract the optimal weights
+    optimal_weights = result.x
+    return optimal_weights
 
 
 if __name__ == '__main__':
@@ -250,13 +284,13 @@ if __name__ == '__main__':
 
     # Create a list of dataframes
     n_clients = 2
-    n_iterations = 1
+    n_iterations = 2
     local_epochs = 10
     alphas = create_alphas(len (train_df['race'].unique()))
     datasets = []
     for i in range(n_clients) :
         #Sample from a Dirichlet distribution 10k samples for training
-        datasets.append(Dirichelet_sampling(train_df, alphas['heterogeneous_10'], train_df['race'].unique(), 10000))
+        datasets.append(Dirichelet_sampling(train_df, alphas['heterogeneous_10'], train_df['race'].unique(), 5000))
 
     #init global model
     global_model = FairFace_CNN()
@@ -294,5 +328,6 @@ if __name__ == '__main__':
                     print('global EOD ', SPD(global_model, val_df, 'race', gr1, gr2))
                     print('\n\n\n')
             #plot_learningCurve(history, str(0), str(0))
-
+        optimal_weights = Optimize_weights(eods)
+        #Change for optimal weights below
         global_model = FedAvg(models, n_clients, [1/n_clients for i in range(n_clients)], (128, 128, 3))
