@@ -34,11 +34,11 @@ def FairFace_CNN(lr=0.001) :
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+    model.add(layers.Conv2D(32, (3, 3), activation='relu'))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Flatten())
-    model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(16, activation='relu'))
+    model.add(layers.Dropout(0.2))
     model.add(layers.Dense(1, activation='sigmoid'))
 
     # Compile the model
