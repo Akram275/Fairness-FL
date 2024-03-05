@@ -34,11 +34,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 
-#from aif360.datasets import BinaryLabelDataset
-#from aif360.datasets import AdultDataset, GermanDataset, CompasDataset
-#from aif360.metrics import BinaryLabelDatasetMetric
-#from aif360.metrics import ClassificationMetric
-#from aif360.algorithms.preprocessing.reweighing import Reweighing
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -373,11 +368,7 @@ if __name__ == '__main__':
         else :
             print('optimal subset selection failed after max_attempts tries')
         Agg_model = FedAvg(models, n_clients, [round(1/n_clients, 2) for i in range(n_clients)], input_shape)
-        #synthesis = plot_Fairness_Values_synthesis(models[0], models[3], Agg_model, x_shadow, y_shadow, data['race'].unique(), 'spd')
         synthesis2 = plot_Fairness_Values_synthesis2(models, Agg_model, x_train, y_train, 'Black', 'Other', 'SPD')
-        #synthesis.show()
-
-        #synthesis.savefig('ACNS_paper_figs/iteration'+str(n_iterations))
         #Replace 'Some_file' by your file
         synthesis2.savefig('Some_file/iteration_'+str(n_iterations))
         #plt.show(block=False)
