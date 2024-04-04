@@ -203,7 +203,7 @@ def update_local_model(agg_model, input_shape) :
     local_model.set_weights(agg_model.get_weights())
     return local_model
 
-
+#This function is only meaningful for the 2 clients visualization setting
 def plot_Fairness_Values_synthesis(model1, model2, agg_model, x_test, y_test, sensitive_attr, metric) :
     model1_fairness = []
     model2_fairness = []
