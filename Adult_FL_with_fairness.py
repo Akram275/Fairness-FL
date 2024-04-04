@@ -251,7 +251,6 @@ def plot_Fairness_Values_synthesis(model1, model2, agg_model, x_test, y_test, se
 
 
 
-
 def plot_Fairness_Values_synthesis2(models, agg_model, x_test, y_test, sensitive_attr, protected_attr, metric, opt=False, indices=None) :
     models_fairness = []
     if metric == 'EOD' or metric == 'eod':
@@ -271,16 +270,17 @@ def plot_Fairness_Values_synthesis2(models, agg_model, x_test, y_test, sensitive
             #    offset = width * multiplier
     mean = np.mean(models_fairness)
     x_axis = np.arange(len(models_fairness))
-    rects = ax.bar((2 * x_axis)/3 + 0.2, models_fairness, 0.20, label='models')
-    ax.bar_label(rects, padding=3)
+    rects = ax.bar((2 * x_axis)/3 + 0.15, models_fairness, 0.42, edgecolor='black', label='models')
+    #ax.bar_label(rects, padding=3)
 
-    rects = ax.bar(len(models) + 0.20, mean, 0.20, label='mean')
-    ax.bar_label(rects, padding=3)
+    rects = ax.bar(len(models) + 0.25, mean, 0.42, edgecolor='black', label='mean')
+    #ax.bar_label(rects, padding=3)
+    rects = ax.bar(len(models) - 0.2, aggmodel_fairness, 0.42, edgecolor='black', label='aggregated model (FedAvg)')
 
-    rects = ax.bar(len(models) + 0.0, aggmodel_fairness, 0.20, label='aggregated model (FedAvg)')
-    ax.bar_label(rects, padding=3)
+    #ax.bar_label(rects, padding=3)
 
     ax.axhline(y=0.0, color='r', linestyle='-')
+    plt.axvline(x=7.7, color='black', linestyle='--')
     multiplier += 1
 
     # plots
@@ -290,8 +290,9 @@ def plot_Fairness_Values_synthesis2(models, agg_model, x_test, y_test, sensitive
     #ax.set_title('models fairness evaluations')
     #ax.set_xticks([0, 6], labels, rotation=45)
     ax.legend(loc='upper left', )
-    ax.set_ylim(-0.75, 0.75)
-    return fig
+    ax.set_ylim(-0.25, 0.25)
+    ax.grid(axis = 'y')
+    return (fig, np.abs(mean - aggmodel_fairness))
 
 
 if __name__ == '__main__':
@@ -332,17 +333,19 @@ if __name__ == '__main__':
 
     input_shape = (x_shadow.shape[1],)
 
-    n_clients = 5
+    n_clients = 10
     target_loss = 3.0
     target_acc = 0.83
     target_recall = 0.6
     target_precision = 0.6
-    epochs = 80
+    epochs = 100
     n_iterations = 0
-    max_iterations = 10
+    max_iterations = 15
     #how to initilize kernel and bias weights
     init_distrib = tf.initializers.HeUniform(seed=SEED)
     scores = []
+    #distances between agg_model's fairness and the mean
+    distances = []
     Agg_model = Adult_NN(input_shape, init_distrib)
     d_clients = []
     for i in range(n_clients) :
@@ -368,7 +371,8 @@ if __name__ == '__main__':
         else :
             print('optimal subset selection failed after max_attempts tries')
         Agg_model = FedAvg(models, n_clients, [round(1/n_clients, 2) for i in range(n_clients)], input_shape)
-        synthesis2 = plot_Fairness_Values_synthesis2(models, Agg_model, x_train, y_train, 'Black', 'Other', 'SPD')
+        (synthesis2, dist) = plot_Fairness_Values_synthesis2(models, Agg_model, x_train, y_train, 'Black', 'Other', 'SPD')
+        distances.append(dist)
         #Replace 'Some_file' by your file
         synthesis2.savefig('Some_file/iteration_'+str(n_iterations))
         #plt.show(block=False)
