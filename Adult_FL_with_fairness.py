@@ -79,7 +79,7 @@ def sum_scaled_weights(scaled_weight_list):
     avg_grad = list()
     # get the average grad accross all client gradients
     for grad_list_tuple in zip(*scaled_weight_list):
-        layer_mean = tf.math.reduce_sum([tf.convert_to_tensor(grad_list_tuple[0]), tf.convert_to_tensor(grad_list_tuple[1])] , axis=0)
+        layer_mean = tf.math.reduce_sum([tf.convert_to_tensor(grad_list_tuple[i]) for i in range(len(scaled_weight_list))] , axis=0)
         avg_grad.append(layer_mean)
 
     return avg_grad
