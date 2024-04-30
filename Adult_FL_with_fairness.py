@@ -295,6 +295,45 @@ def plot_Fairness_Values_synthesis2(models, agg_model, x_test, y_test, sensitive
     return (fig, np.abs(mean - aggmodel_fairness))
 
 
+
+
+def Optimize_weights(fairness) :
+    # Assuming 'fairness' is the set of  fairness eval (EOD or SPD or others )
+    fairness_plus = np.maximum(0, fairness)  # Positive subset
+    fairness_minus = -np.minimum(0, fairness)  # Negative subset
+
+
+    def objective_function(weights, n):
+        return np.sum((weights - 1/n)**2)
+
+    #sum weights = 1
+    def constraint_function(weights):
+        return np.sum(weights) - 1
+
+    # Custom equality function: weighted sum of positive numbers equals the absolute value of the weighted sum of negative numbers
+    def equality_function(weights):
+        return np.sum(weights * fairness_plus) - np.sum(np.abs(weights * fairness_minus))
+
+    # Constraint: weights are non-negative
+    bounds = [(0, 1) for _ in range(len(fairness))]
+
+    # Initial guess for weights
+    initial_weights = np.ones(len(fairness)) / len(fairness)
+
+    # Solve the optimization problem
+    result = minimize(objective_function, initial_weights, args=(len(fairness),), method='SLSQP', constraints=[
+        {'type': 'eq', 'fun': equality_function},
+        {'type': 'eq', 'fun': constraint_function},
+    ], bounds=bounds)
+
+
+    # Extract the optimal weights
+    optimal_weights = result.x
+    return optimal_weights
+
+
+
+
 if __name__ == '__main__':
 
 
