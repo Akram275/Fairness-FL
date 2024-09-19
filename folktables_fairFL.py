@@ -1,4 +1,4 @@
-from n_clients_improoved_FL import *
+from n_clients_improved_FL import *
 from sklearn.model_selection import train_test_split
 from folktables import ACSDataSource, ACSEmployment, ACSIncome, ACSPublicCoverage
 from SSP_tests import *
