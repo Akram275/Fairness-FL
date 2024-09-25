@@ -198,7 +198,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
         elif mode == 'SSP' :
             scaled_fairness = [(f * w) for (f, w) in zip(curr_fairness, fedavg_weights)]
             max_attempts = 7
-            epsilon = 10**(-(max_attempts-1))
+            epsilon = 10**(-(max_attempts+1))
             n_attempts = 1
             optimal_sum, optimal_subset = approximate_subset_sum_floats(scaled_fairness, 0.0, epsilon)
             while ((optimal_sum, optimal_subset) == (None, []) or len(optimal_subset) < 3 or n_attempts < max_attempts) :
