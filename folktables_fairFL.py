@@ -1,18 +1,35 @@
-from n_clients_improved_FL import *
+from n_clients_improoved_FL import *
 from sklearn.model_selection import train_test_split
 from folktables import ACSDataSource, ACSEmployment, ACSIncome, ACSPublicCoverage
 from SSP_tests import *
 import csv
+from scipy.stats import wasserstein_distance
+from sklearn.cluster import AgglomerativeClustering
 
+#Optimal states (with most opposing unfairness)
+income_eod_states = ['AL', 'AK', 'AR', 'DE', 'FL', 'ME', 'MD', 'NE', 'NY', 'WA']
+income_spd_states =  ['AL', 'AK', 'AZ', 'GA', 'ID', 'MS', 'MT', 'NV', 'SD', 'WV']
 
-states = ["AL", "CA", "WA", "NC", "NY", "AZ", "FL", "TX", "OH", "IL"]
+employment_spd_states = ['AL', 'AK', 'AZ', 'CO', 'DE', 'NE', 'PA', 'WA', 'WI', 'WY']
+employment_eod_states = ['AL', 'AK', 'AZ', 'CA', 'MS', 'NE', 'NJ', 'NY', 'OR', 'TX']
+
+publiccoverage_spd_states = ['AL', 'AK', 'AZ', 'CT', 'NE', 'ND', 'OK', 'PA', 'SD', 'TX']
+publiccoverage_eod_states = ['AL', 'AK', 'AZ', 'DE', 'KS', 'MO', 'NV', 'OK', 'SC', 'WI']
+
+all_states = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY']
 
 #Pick groups for which the fairness analysis will be carried. Full details on attributes and groups in
 #https://arxiv.org/pdf/2108.04884
 
-attr='MAR'
-protected_attr=2.0
-privileged_attr=3.0
+attr='SEX'
+protected_attr=1.0
+privileged_attr=2.0
+
 
 
 #Weights initialization
@@ -120,7 +137,8 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
     models = []
     input_shape = (datasets[0][0].shape[1],)
 
-    #Do we want to compare against a centralized training baseline ?
+    #Do we want to compare against a centralized training baseline
+    #(yes --> do it and save the metrics at the first row of csv file)?
     if centralized_test :
         centralized_x = pd.concat([dataset[0] for dataset in datasets])
         centralized_y = pd.concat([dataset[1] for dataset in datasets])
@@ -129,7 +147,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
         centralized_model.fit(centralized_x, centralized_y, epochs=50, verbose=0)
         print('evaluating the centralized model')
         eval = centralized_model.evaluate(test_features, test_labels)
-        conv_file_name = 'CIKM_data/'+task+'/convergence_'+mode+'.csv'
+        conv_file_name = 'CIKM_data/'+task+'/'+mode+'/convergence.csv'
         curr_global_fairness = [float(EOD2(centralized_model, test_features, test_labels, attr=attr, protected=protected_attr, privileged=privileged_attr)),
                                 float(SPD2(centralized_model, test_features, test_labels, attr=attr, protected=protected_attr, privileged=privileged_attr))]
 
@@ -137,7 +155,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
             writer = csv.writer(file)
             writer.writerow(eval)
 
-        fairness_file_name = 'CIKM_data/'+task+'/fairness_'+mode+'.csv'
+        fairness_file_name = 'CIKM_data/'+task+'/'+mode+'/fairness.csv'
         with open(fairness_file_name, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(curr_global_fairness)
@@ -147,7 +165,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
 
 
     Agg_model = Adult_NN(input_shape, init_distrib)
-
+    ds_sizes = [datasets[i][0].shape[0] for i in range(len(datasets))]
     while (True) :
         curr_fairness = []
         models = []
@@ -156,39 +174,65 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
         for i in range(n_clients) :
             model = update_local_model(Agg_model, input_shape)
             print('training model n°', i+1, 'at iteration : ', n_iterations)
-            x_train = datasets[i][0].sample(n=25000, replace=True)
+            x_train = datasets[i][0].sample(n=int(datasets[i][0].shape[0] * 0.7), replace=False)
             y_train = datasets[i][1].loc[x_train.index]
-            x_test = datasets[i][0].drop(x_train.index).sample(n=1000)
+            x_test = datasets[i][0].drop(x_train.index) #Use the rest for test
             y_test = datasets[i][1].loc[x_test.index]
             history = model.fit(x_train, y_train, validation_split=0.2, batch_size=32, epochs=epochs, verbose=0)
             models.append(model)
-            print(f"model {i} performance  : {model.evaluate(x_test, y_test, verbose=0)}")
-            curr_fairness.append(EOD2(model, x_test, y_test, attr=attr, protected=protected_attr, privileged=privileged_attr))
+            print(f"model {i} local performance : {model.evaluate(x_test, y_test, verbose=0)}")
+            print(metric)
+            if metric == 'eod' :
+                curr_fairness.append(EOD2(model, x_test, y_test, attr=attr, protected=protected_attr, privileged=privileged_attr))
+            if metric == 'spd' :
+                curr_fairness.append(SPD2(model, x_test, y_test, attr=attr, protected=protected_attr, privileged=privileged_attr))
         print('models fairness : ', curr_fairness)
-        fedavg_weights = [round(1/n_clients, 2) for i in range(n_clients)]
-        optimal_weights = Optimize_weights(curr_fairness)
-        print('Optimal weights at current iteration : ', optimal_weights)
+        fedavg_weights = [datasets[i][0].shape[0]/sum(ds_sizes) for i in range(len(datasets))]
+
         if mode == 'FedAvg' :
             Agg_model = FedAvg(models, n_clients, fedavg_weights, input_shape)
         elif mode == 'WO' :
+            optimal_weights = Optimize_weights(curr_fairness)
+            print('Optimal weights at current iteration : ', optimal_weights)
             Agg_model = FedAvg(models, n_clients, optimal_weights, input_shape)
+        elif mode == 'SSP' :
+            scaled_fairness = [(f * w) for (f, w) in zip(curr_fairness, fedavg_weights)]
+            max_attempts = 7
+            epsilon = 10**(-(max_attempts-1))
+            n_attempts = 1
+            optimal_sum, optimal_subset = approximate_subset_sum_floats(scaled_fairness, 0.0, epsilon)
+            while ((optimal_sum, optimal_subset) == (None, []) or len(optimal_subset) < 3 or n_attempts < max_attempts) :
+                n_attempts +=1
+                epsilon = 10 * epsilon
+                print(f'failed to find optimal subset at attempt {n_attempts} with epsilon {epsilon}')
+                optimal_sum, optimal_subset = approximate_subset_sum_floats(scaled_fairness, 0.0, epsilon)
+            if optimal_sum != [] :
+                print(f'Optimal subset found : {optimal_subset} with sum {optimal_sum}')
+                opt_models = [models[i] for i in optimal_subset]
+                opt_fedavg_weight = [fedavg_weights[i] for i in optimal_subset]
+                #normalize optimal clients' FedAvg weights
+                opt_fedavg_weight = [k/sum(opt_fedavg_weight) for k in opt_fedavg_weight]
+                Agg_model = FedAvg(opt_models, len(optimal_subset), opt_fedavg_weight, input_shape)
+            elif optimal_sum == None :
+                print('SSP Failure --> FedAvg')
+                Agg_model = FedAvg(models, n_clients, optimal_weights, input_shape)
         #Evaluate global model on the union validation dataset
         scores.append(Agg_model.evaluate(test_features, test_labels))
 
         for i in range(len(scores)) :
             print(f"iteration {i} : {[round(s, 5) for s in scores[i]]}")
         SPD_global.append(SPD2(Agg_model, test_features, test_labels, attr=attr, protected=protected_attr, privileged=privileged_attr))
-        synthesis2, dist = plot_Fairness_Values_synthesis2(models, Agg_model, test_features, test_labels, metric='SPD')
-        synthesis2.savefig('CIKM_data/'+task+'/iteration_'+mode+'_'+str(n_iterations))
+        synthesis2, dist = plot_Fairness_Values_synthesis2(models, Agg_model, test_features, test_labels, metric=metric)
+        synthesis2.savefig('CIKM_data/'+task+'/'+mode+'/iteration_'+str(n_iterations))
         EOD_global.append(EOD2(Agg_model, test_features, test_labels, attr=attr, protected=protected_attr, privileged=privileged_attr))
         curr_global_fairness = [float(EOD_global[-1]), float(SPD_global[-1])]
 
-        conv_file_name = 'CIKM_data/'+task+'/convergence_'+mode+'.csv'
+        conv_file_name = 'CIKM_data/'+task+'/'+mode+'/convergence.csv'
         with open(conv_file_name, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(scores[-1])
 
-        fairness_file_name = 'CIKM_data/'+task+'/fairness_'+mode+'.csv'
+        fairness_file_name = 'CIKM_data/'+task+'/'+mode+'/fairness.csv'
         with open(fairness_file_name, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(curr_global_fairness)
@@ -198,14 +242,36 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
 
 
 if __name__ =='__main__' :
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print("Usage: python3 folkTables_FairFL.py \"task\" (ASCEmployement, ASCIncome, ASCPublicCoverage)" )
         sys.exit(1)
 
     task = sys.argv[1]
+    if task not in ['ACSIncome', 'ACSEmployment', 'ACSPublicCoverage'] :
+        print('unsported task (not in : ACSIncome, ACSEmployment, ACSPublicCoverage)')
+        sys.exit(1)
+    metric = sys.argv[2]
+
+    if task == 'ACSIncome' :
+        if metric == 'eod' :
+            states = income_eod_states
+        if metric== 'spd' :
+            states = income_spd_states
+    if task == 'ACSEmployment' :
+        if metric == 'spd' :
+            states = employment_spd_states
+        if metric == 'eod' :
+            states = employment_eod_states
+    if task == 'ACSPublicCoverage' :
+        if metric == 'spd' :
+            states = publiccoverage_spd_states
+        if metric == 'eod' :
+            states = publiccoverage_eod_states
+
     data_source = ACSDataSource(survey_year='2018', horizon='1-Year', survey='person')
     datasets = []
-    #Some states to simulate clients data
+
+    #Some clusters of 10 states to simulate clients data
     for state in states :
         print('Client simulates '+state+' ACS data')
         acs_data = data_source.get_data(states=[state], download=True)
@@ -216,5 +282,9 @@ if __name__ =='__main__' :
         if task == 'ACSIncome' :
             datasets.append(ACSIncome.df_to_pandas(acs_data))
         print('dataset size : ', datasets[-1][0].shape[0])
-    #run_training(task, datasets, epochs=3, max_iterations=100, mode='FedAvg', centralized_test=True)
-    run_training(task, datasets, epochs=5, max_iterations=100, mode='FedAvg', centralized_test=True)
+
+    #Do a first centralized + FedAvg baseline training
+    #run_training(task, datasets, epochs=1, max_iterations=150, mode='FedAvg', centralized_test=True)
+    #Do a second with our FADE solutions
+    run_training(task, datasets, epochs=1, max_iterations=150, mode='WO', centralized_test=False)
+    run_training(task, datasets, epochs=1, max_iterations=150, mode='SSP', centralized_test=False)
