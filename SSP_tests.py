@@ -52,19 +52,21 @@ def approximate_subset_sum_floats(nums, target, epsilon, precision=4):
         closest_sum /= scale
         return closest_sum, subset
 
-    return None, None
+    return None, []
 
 
-# Example usage
-nums = np.random.normal(0, 0.1, 100).tolist()
-target = 0
-epsilon = 0.0001
+if __name__=="__main__" :
 
-start_time = time.time()  # Record the start time
-result_sum, result_subset = approximate_subset_sum_floats(nums, target, epsilon)
-end_time = time.time()  # Record the end time
-execution_time = end_time - start_time
+    # Example usage
+    nums = np.random.normal(0, 0.1, 100).tolist()
+    target = 0
+    epsilon = 0.0001
 
-print(f"Approximate sum within [{target - epsilon}, {target + epsilon}]: {result_sum}")
-print(f"Subset that achieves the approximate sum: {result_subset}")
-print(f"Execution time: {execution_time * 1000} miliseconds")
+    start_time = time.time()  # Record the start time
+    result_sum, result_subset = approximate_subset_sum_floats(nums, target, epsilon)
+    end_time = time.time()  # Record the end time
+    execution_time = end_time - start_time
+
+    print(f"Approximate sum within [{target - epsilon}, {target + epsilon}]: {result_sum}")
+    print(f"Subset that achieves the approximate sum: {result_subset}")
+    print(f"Execution time: {execution_time * 1000} miliseconds")
