@@ -284,7 +284,7 @@ if __name__ =='__main__' :
         print('dataset size : ', datasets[-1][0].shape[0])
 
     #Do a first centralized + FedAvg baseline training
-    #run_training(task, datasets, epochs=1, max_iterations=150, mode='FedAvg', centralized_test=True)
+    run_training(task, datasets, epochs=1, max_iterations=150, mode='FedAvg', centralized_test=True)
     #Do a second with our FADE solutions
     run_training(task, datasets, epochs=1, max_iterations=150, mode='WO', centralized_test=False)
     run_training(task, datasets, epochs=1, max_iterations=150, mode='SSP', centralized_test=False)
