@@ -215,7 +215,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
                 Agg_model = FedAvg(opt_models, len(optimal_subset), opt_fedavg_weight, input_shape)
             elif optimal_subset == [] :
                 print('SSP Failure --> FedAvg')
-                Agg_model = FedAvg(models, n_clients, optimal_weights, input_shape)
+                Agg_model = FedAvg(models, n_clients, fedavg_weights, input_shape)
         #Evaluate global model on the union validation dataset
         scores.append(Agg_model.evaluate(test_features, test_labels))
 
