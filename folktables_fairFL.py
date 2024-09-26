@@ -206,14 +206,14 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
                 epsilon = 10 * epsilon
                 print(f'failed to find optimal subset at attempt {n_attempts} with epsilon {epsilon}')
                 optimal_sum, optimal_subset = approximate_subset_sum_floats(scaled_fairness, 0.0, epsilon)
-            if optimal_sum != [] :
+            if optimal_subset != [] :
                 print(f'Optimal subset found : {optimal_subset} with sum {optimal_sum}')
                 opt_models = [models[i] for i in optimal_subset]
                 opt_fedavg_weight = [fedavg_weights[i] for i in optimal_subset]
                 #normalize optimal clients' FedAvg weights
                 opt_fedavg_weight = [k/sum(opt_fedavg_weight) for k in opt_fedavg_weight]
                 Agg_model = FedAvg(opt_models, len(optimal_subset), opt_fedavg_weight, input_shape)
-            elif optimal_sum == [] :
+            elif optimal_subset == [] :
                 print('SSP Failure --> FedAvg')
                 Agg_model = FedAvg(models, n_clients, optimal_weights, input_shape)
         #Evaluate global model on the union validation dataset
