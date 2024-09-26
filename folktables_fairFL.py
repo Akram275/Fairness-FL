@@ -201,7 +201,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
             epsilon = 10**(-(max_attempts+1))
             n_attempts = 1
             optimal_sum, optimal_subset = approximate_subset_sum_floats(scaled_fairness, 0.0, epsilon)
-            while ((optimal_sum, optimal_subset) == (None, []) or len(optimal_subset) < 3 or n_attempts < max_attempts) :
+            while (((optimal_sum, optimal_subset) == (None, []) or len(optimal_subset) < 3) and n_attempts < max_attempts) :
                 n_attempts +=1
                 epsilon = 10 * epsilon
                 print(f'failed to find optimal subset at attempt {n_attempts} with epsilon {epsilon}')
@@ -213,7 +213,7 @@ def run_training(task, datasets, epochs, max_iterations, mode, centralized_test)
                 #normalize optimal clients' FedAvg weights
                 opt_fedavg_weight = [k/sum(opt_fedavg_weight) for k in opt_fedavg_weight]
                 Agg_model = FedAvg(opt_models, len(optimal_subset), opt_fedavg_weight, input_shape)
-            elif optimal_sum == None :
+            elif optimal_sum == [] :
                 print('SSP Failure --> FedAvg')
                 Agg_model = FedAvg(models, n_clients, optimal_weights, input_shape)
         #Evaluate global model on the union validation dataset
