@@ -283,8 +283,8 @@ if __name__ =='__main__' :
 
 
     #Perform a first centralized + FedAvg baseline training
-    run_training(task, datasets, epochs=1, max_iterations=150, mode='FedAvg', centralized_test=False)
-    #run_training(task, datasets, epochs=1, max_iterations=150, mode='FairFed', centralized_test=False)
+    run_training(task, datasets, epochs=1, max_iterations=150, mode='FedAvg', centralized_test=True)
+    run_training(task, datasets, epochs=1, max_iterations=150, mode='FairFed', centralized_test=False)
     #Perform a second with our FADE solutions
-    #run_training(task, datasets, epochs=1, max_iterations=150, mode='OptW', centralized_test=False)
+    run_training(task, datasets, epochs=1, max_iterations=150, mode='OptW', centralized_test=False)
     run_training(task, datasets, epochs=1, max_iterations=150, mode='SSP', centralized_test=False)
