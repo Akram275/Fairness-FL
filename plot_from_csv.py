@@ -87,10 +87,10 @@ def plot_metric(task, metric_name, modes, fairness_metric):
     markers = ['o', '^', 's']
     for i, mode in enumerate(modes) :
         if mode == 'FedAvg' :
-            plt.plot(iterations[0:max_iterations], [k + np.random.normal(0, 0.001) for k in metric_data[0][1:max_iterations+1]], label=mode, color='b', marker=markers[i])
+            plt.plot(iterations[0:max_iterations], [k  for k in metric_data[0][1:max_iterations+1]], label=mode, color='b', marker=markers[i])
         else :
-            plt.plot(iterations[0:max_iterations], [k + 0.025 + np.random.normal(0, 0.001) for k in metric_data[i][0:max_iterations]], label=f'FADE-{mode}', marker=markers[i])
-            #plt.plot(iterations[0:max_iterations], [0.45, 0.55] + [k + 0.25 if k <=0.55 else k for k in metric_data[i][2:max_iterations]], label=f'FADE-{mode}', marker=markers[i])
+            plt.plot(iterations[0:max_iterations], [k  for k in metric_data[i][0:max_iterations]], label=f'FADE-{mode}', marker=markers[i])
+            
 
     plt.xlabel('Iterations', fontsize=18)
     plt.ylabel(metric_name, fontsize=18)
